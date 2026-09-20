@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Walt Disney — Castle Scroll Journey</title>
+<link rel="preload" as="image" href="seq_opt/ezgif-frame-001.jpg">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
+:root{
+  --bg:#08090d; --surface:rgba(14,15,22,.68); --surface-2:rgba(20,20,28,.85);
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,184,77,.4);
+  --gold:#ffb84d; --gold-2:#ff7a4d; --text:#f5f5f5; --muted:#bbb; --faint:#8a8a93;
+  --radius:20px; --radius-lg:28px;
+  --shadow:0 20px 50px rgba(0,0,0,.4); --shadow-lg:0 30px 80px rgba(0,0,0,.5);
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+::selection{background:rgba(255,184,77,.35);color:#fff}
+::-webkit-scrollbar{width:10px}::-webkit-scrollbar-track{background:#0a0b10}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--gold),var(--gold-2));border-radius:8px}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+.skip-link{position:fixed;top:-60px;left:16px;z-index:3000;background:var(--gold);color:#111;font-weight:700;padding:10px 16px;border-radius:10px;transition:top .25s;text-decoration:none}
+.skip-link:focus{top:12px}
+
+/* ---------- LOADER (lumenvale style) ---------- */
+#loader{position:fixed;inset:0;z-index:3000;background:radial-gradient(ellipse at 50% 40%,#17131f 0%,#05060f 78%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .8s ease,visibility .8s}
+#loader.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.loader-star{width:54px;height:54px;animation:spin 6s linear infinite;filter:drop-shadow(0 0 14px rgba(255,184,77,.8))}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-title{font-family:"Playfair Display",serif;font-style:italic;font-size:22px}
+.loader-track{width:min(280px,60vw);height:2px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}
+#loaderFill{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffb84d,#ff7a4d)}
+#loaderPct{font-size:13px;color:#aaa}
+
+/* ---------- SCROLL SEQUENCE CANVAS (youtube tutorial style) ---------- */
+#sequence-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;object-fit:cover}
+.readability{position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(8,9,13,.55) 0%,rgba(8,9,13,.35) 30%,rgba(8,9,13,.55) 65%,rgba(8,9,13,.88) 100%)}
+.grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.55) 100%)}
+
+/* ---------- PROGRESS + CURSOR (c.html + d.html) ---------- */
+.progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,#ffb84d,#ff7a4d,#ffb84d);background-size:200% 100%;z-index:2000;box-shadow:0 0 12px rgba(255,184,77,.7)}
+.cursor-dot,.cursor-ring{position:fixed;top:0;left:0;border-radius:50%;pointer-events:none;z-index:2200;transform:translate(-50%,-50%)}
+.cursor-dot{width:6px;height:6px;background:#ffb84d}
+.cursor-ring{width:34px;height:34px;border:1px solid rgba(255,184,77,.5);transition:width .25s,height .25s,background .25s}
+.cursor-ring.hover{width:60px;height:60px;background:rgba(255,184,77,.08)}
+body.touch .cursor-dot,body.touch .cursor-ring{display:none}
+body.touch{cursor:auto}
+
+/* ---------- NAV ---------- */
+nav{position:fixed;top:0;left:0;width:100%;z-index:1000;padding:16px 6%;display:flex;justify-content:space-between;align-items:center;background:rgba(8,9,13,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,184,77,.12);transition:padding .3s,background .3s,box-shadow .3s}
+nav.scrolled{padding:10px 6%;background:rgba(8,9,13,.85);box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.logo{font-size:19px;font-weight:800;display:flex;align-items:center;gap:10px}
+.logo-mark{width:26px;height:26px;flex:none;filter:drop-shadow(0 0 8px rgba(255,184,77,.7))}
+.logo span{color:#ffb84d}
+.nav-links{display:flex;gap:28px}
+.nav-links a{position:relative;color:#aaa;text-decoration:none;font-size:14px;padding-bottom:4px;transition:.25s}
+.nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0%;height:1px;background:#ffb84d;transition:width .3s}
+.nav-links a:hover{color:#fff}.nav-links a:hover::after,.nav-links a.active::after{width:100%}
+.nav-links a.active,.nav-links a.active{color:#ffb84d}
+.hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:6px}
+.hamburger span{width:22px;height:2px;background:#f5f5f5;transition:.3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mobile-menu{position:fixed;inset:0;background:rgba(8,9,13,.97);z-index:990;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;opacity:0;pointer-events:none;transition:opacity .3s}
+.mobile-menu.open{opacity:1;pointer-events:auto}
+.mobile-menu a{color:#f5f5f5;text-decoration:none;font-family:"Playfair Display",serif;font-size:30px}
+
+/* ---------- LAYOUT ---------- */
+.content{position:relative;z-index:5}
+section{padding:110px 7%;max-width:1250px;margin:auto;position:relative}
+.section-label{color:#ffb84d;text-transform:uppercase;font-size:12px;letter-spacing:2px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.section-label::after{content:"";height:1px;width:64px;background:linear-gradient(90deg,rgba(255,184,77,.7),transparent)}
+.section-title{font-family:"Playfair Display",serif;font-size:clamp(34px,5vw,58px);margin-bottom:20px;text-shadow:0 2px 24px rgba(0,0,0,.6)}
+.section-intro{color:#cfcfcf;max-width:700px;line-height:1.8;margin-bottom:50px;text-shadow:0 1px 12px rgba(0,0,0,.7)}
+
+/* ---------- HERO (c.html entrance) ---------- */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 7% 80px;position:relative;max-width:none}
+.hero-content{max-width:900px}
+.eyebrow{display:inline-block;padding:8px 15px;border:1px solid rgba(255,184,77,.4);border-radius:999px;color:#ffb84d;font-size:13px;font-weight:600;margin-bottom:25px;background:rgba(8,9,13,.45);backdrop-filter:blur(6px);opacity:0}
+.hero h1{font-family:"Playfair Display",serif;font-size:clamp(48px,8vw,92px);line-height:.98;letter-spacing:-3px;margin-bottom:28px;opacity:0;text-shadow:0 4px 40px rgba(0,0,0,.7)}
+.hero h1 span{color:#ffb84d}
+.hero p{max-width:680px;margin:auto;color:#e6e6e6;font-size:18px;line-height:1.8;opacity:0;text-shadow:0 2px 16px rgba(0,0,0,.8)}
+.scroll-btn{display:inline-block;margin-top:40px;padding:14px 26px;border-radius:12px;background:#fff;color:#111;text-decoration:none;font-weight:700;transition:.25s;opacity:0}
+.scroll-btn:hover{transform:translateY(-3px);background:#ffb84d;box-shadow:0 10px 30px rgba(255,184,77,.3)}
+.scroll-btn.ghost{background:transparent;color:#f5f5f5;border:1px solid rgba(255,255,255,.25);margin-left:12px}
+.scroll-btn.ghost:hover{border-color:rgba(255,184,77,.6);background:rgba(255,184,77,.1);box-shadow:none}
+.hero-meta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:28px;opacity:0}
+.hero-meta span{font-size:12px;letter-spacing:1.5px;color:#ddd;border:1px solid rgba(255,255,255,.16);background:rgba(8,9,13,.45);backdrop-filter:blur(6px);padding:8px 14px;border-radius:999px}
+.hero-meta b{color:#ffb84d}
+.scroll-indicator{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);width:22px;height:36px;border:2px solid rgba(255,255,255,.35);border-radius:20px;opacity:0}
+.scroll-indicator::before{content:"";position:absolute;top:6px;left:50%;width:4px;height:8px;background:#ffb84d;border-radius:2px;transform:translateX(-50%);animation:scrollDot 1.8s ease infinite}
+@keyframes scrollDot{0%{transform:translate(-50%,0);opacity:1}70%{opacity:0}100%{transform:translate(-50%,14px);opacity:0}}
+
+/* ---------- JOURNEY (lumenvale chapters + youtube scrub) ---------- */
+#journey{max-width:none;padding:0;position:relative}
+.journey-pin{height:500vh;position:relative}
+.journey-sticky{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.journey-step{position:absolute;max-width:640px;padding:38px 42px;border-radius:22px;background:rgba(8,9,13,.55);border:1px solid rgba(255,184,77,.25);backdrop-filter:blur(14px);text-align:center;opacity:0;transform:translateY(40px);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.journey-step .chapter-num{font-family:"Playfair Display",serif;font-style:italic;font-size:64px;color:rgba(255,184,77,.35);line-height:1}
+.journey-step h3{font-family:"Playfair Display",serif;font-size:clamp(26px,4vw,44px);margin:10px 0}
+.journey-step p{color:#ddd;line-height:1.75}
+.journey-hint{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:2px;color:#ffb84d}
+.journey-dots{position:absolute;right:26px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;z-index:6}
+.journey-dots button{width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,184,77,.6);background:transparent;cursor:pointer;padding:0;transition:.3s}
+.journey-dots button.active{background:#ffb84d;box-shadow:0 0 12px rgba(255,184,77,.8);transform:scale(1.3)}
+.journey-count{position:absolute;top:22px;right:30px;font-family:"Playfair Display",serif;font-style:italic;font-size:15px;color:rgba(255,184,77,.8);letter-spacing:1px}
+
+/* ---------- GLASS / CARDS / TIMELINE (c.html + d.html tilt) ---------- */
+.glass-panel,.intro-card{background:linear-gradient(135deg,rgba(20,20,28,.72),rgba(20,20,28,.45));border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:45px;font-size:21px;line-height:1.8;color:#eee;position:relative;overflow:hidden;backdrop-filter:blur(10px);box-shadow:0 30px 80px rgba(0,0,0,.45);transform-style:preserve-3d;will-change:transform}
+.highlight{color:#ffb84d;font-weight:700}
+.timeline{position:relative;margin-top:50px}
+.timeline::before{content:"";position:absolute;left:18px;top:0;bottom:0;width:2px;background:rgba(255,255,255,.15)}
+.timeline-fill{position:absolute;left:18px;top:0;width:2px;height:0%;background:linear-gradient(180deg,#ffb84d,#ff7a4d);box-shadow:0 0 10px rgba(255,184,77,.5)}
+.timeline-item{position:relative;padding-left:60px;margin-bottom:55px}
+.timeline-dot{position:absolute;left:8px;top:5px;width:22px;height:22px;border-radius:50%;background:#33343c;border:2px solid rgba(255,255,255,.15);transition:.4s}
+.timeline-item.visible .timeline-dot{background:#ffb84d;border-color:#ffb84d;box-shadow:0 0 25px rgba(255,184,77,.55)}
+.year{color:#ffb84d;font-size:14px;font-weight:700;margin-bottom:8px}
+.timeline-item h3{font-size:25px;margin-bottom:10px}
+.timeline-item p{color:#cfcfcf;line-height:1.75;max-width:720px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{padding:30px;border-radius:20px;background:rgba(14,15,22,.68);border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transform-style:preserve-3d;will-change:transform;box-shadow:0 20px 50px rgba(0,0,0,.4);transition:border-color .35s,background .35s,transform .35s var(--ease);position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(255,184,77,.7),transparent);opacity:0;transition:opacity .35s}
+.card:hover{border-color:rgba(255,184,77,.4);background:rgba(20,20,28,.85);transform:translateY(-4px)}
+.card:hover::before{opacity:1}
+.card-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,184,77,.12);border:1px solid rgba(255,184,77,.25);margin-bottom:18px}
+.card-number{font-size:13px;color:#ffb84d;font-weight:700;margin-bottom:20px}
+.card h3{font-size:21px;margin-bottom:12px}.card p{color:#bbb;line-height:1.7}
+.card img{width:100%;border-radius:12px;margin-bottom:16px;display:block;transition:transform .6s var(--ease)}
+.card:hover img{transform:scale(1.03)}
+.year{color:#ffb84d;font-size:13px;font-weight:700;margin-bottom:8px;display:inline-block;padding:5px 12px;border:1px solid rgba(255,184,77,.35);border-radius:999px;background:rgba(255,184,77,.08)}
+.big-moment{padding:60px;border-radius:28px;background:linear-gradient(135deg,rgba(30,24,16,.78),rgba(14,14,20,.6));border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);transform-style:preserve-3d}
+.big-moment h2{font-family:"Playfair Display",serif;font-size:clamp(35px,5vw,60px);margin-bottom:20px}
+.big-moment p{color:#d5d5d5;line-height:1.8;max-width:750px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:45px}
+.stat{padding:35px 25px;text-align:center;background:rgba(14,15,22,.68);border:1px solid rgba(255,255,255,.09);border-radius:18px;backdrop-filter:blur(10px);transition:.35s;transform-style:preserve-3d}
+.stat:hover{transform:translateY(-6px);border-color:rgba(255,184,77,.3)}
+.stat strong{display:block;color:#ffb84d;font-size:40px;margin-bottom:8px}
+.stat span{color:#aaa;font-size:14px}
+.quote-section{text-align:center;padding-top:130px;padding-bottom:130px}
+.quote{max-width:900px;margin:auto;font-family:"Playfair Display",serif;font-size:clamp(28px,4vw,48px);line-height:1.35;text-shadow:0 2px 24px rgba(0,0,0,.7)}
+.quote-mark{font-size:80px;color:#ffb84d;line-height:.5}
+.quote-author{margin-top:25px;color:#bbb;font-size:14px}
+.final{text-align:center;border-top:1px solid rgba(255,255,255,.12)}
+.final h2{font-family:"Playfair Display",serif;font-size:clamp(40px,6vw,70px);margin-bottom:20px}
+.final p{color:#cfcfcf;max-width:650px;margin:auto;line-height:1.8}
+.final-cta{margin-top:36px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.final-cta .scroll-btn{margin-top:0;opacity:1}
+footer{text-align:center;padding:40px 6% 35px;color:#999;font-size:13px;position:relative;z-index:5;border-top:1px solid rgba(255,255,255,.07);background:rgba(8,9,13,.6);backdrop-filter:blur(10px)}
+footer .foot-title{font-family:"Playfair Display",serif;font-style:italic;color:#ddd;font-size:16px;margin-bottom:8px}
+footer .foot-title span{color:#ffb84d}
+
+/* ---------- REVEAL (c.html) ---------- */
+.reveal{opacity:0;transform:translateY(35px) scale(.98);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
+.reveal.visible{opacity:1;transform:translateY(0) scale(1)}
+.cards .reveal:nth-child(1){transition-delay:0s}.cards .reveal:nth-child(2){transition-delay:.12s}.cards .reveal:nth-child(3){transition-delay:.24s}
+.stats .reveal:nth-child(1){transition-delay:0s}.stats .reveal:nth-child(2){transition-delay:.12s}.stats .reveal:nth-child(3){transition-delay:.24s}
+
+.bg-orb{position:fixed;pointer-events:none;border-radius:50%;z-index:1;will-change:transform}
+.bg-orb.one{width:600px;height:600px;background:radial-gradient(circle,rgba(255,184,77,.1),transparent 70%);top:-250px;left:-200px}
+.bg-orb.two{width:500px;height:500px;background:radial-gradient(circle,rgba(100,130,255,.08),transparent 70%);bottom:-250px;right:-200px}
+
+@media(max-width:800px){.nav-links{display:none}.hamburger{display:flex}section{padding:80px 6%}.cards,.stats{grid-template-columns:1fr}.glass-panel,.intro-card,.big-moment{padding:30px}.hero h1{letter-spacing:-2px}.journey-step{margin:0 6%;padding:28px}.cursor-dot,.cursor-ring{display:none}.journey-dots{display:none}.glass-panel,.intro-card,.card,.stat,.big-moment,.journey-step{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}.grain{display:none}.hero-meta span{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#intro">Skip to story</a>
+
+<div id="loader"><svg class="loader-star" viewBox="0 0 100 100"><path fill="#ffb84d" d="M50 2 L61 39 L98 39 L68 61 L79 98 L50 75 L21 98 L32 61 L2 39 L39 39 Z"/></svg><div class="loader-title">The castle is awakening…</div><div class="loader-track"><span id="loaderFill"></span></div><div id="loaderPct">0%</div></div>
+
+<canvas id="sequence-canvas"></canvas>
+<div class="readability"></div>
+<div class="vignette"></div>
+<div class="grain"></div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<nav id="topnav">
+  <div class="logo"><svg class="logo-mark" viewBox="0 0 100 100" aria-hidden="true"><path fill="#ffb84d" d="M50 2 L61 39 L98 39 L68 61 L79 98 L50 75 L21 98 L32 61 L2 39 L39 39 Z"/></svg>Walt <span>Disney</span></div>
+  <div class="nav-links">
+    <a href="#early" data-nav>Early Life</a>
+    <a href="#struggle" data-nav>Struggle</a>
+    <a href="#success" data-nav>Success</a>
+    <a href="#disneyland" data-nav>Disneyland</a>
+    <a href="#lesson" data-nav>Lesson</a>
+  </div>
+  <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#early">Early Life</a><a href="#struggle">Struggle</a><a href="#success">Success</a><a href="#disneyland">Disneyland</a><a href="#lesson">Lesson</a>
+</div>
+
+<div class="bg-orb one" id="orbOne"></div>
+<div class="bg-orb two" id="orbTwo"></div>
+
+<div class="content">
+
+<header class="hero">
+  <div class="hero-content">
+    <div class="eyebrow" id="eyebrow">A STORY OF STRUGGLE &amp; SUCCESS</div>
+    <h1 id="heroTitle">Walt Disney:<br><span>Dreams After Failure</span></h1>
+    <p id="heroText">Behind one of the world's most successful entertainment companies was a man who faced rejection, bankruptcy, setbacks and failure — but kept moving forward. Scroll to fly toward the castle.</p>
+    <a href="#journey" class="scroll-btn" id="heroCta">Begin the flight ↓</a><a href="#intro" class="scroll-btn ghost" id="heroCta2">Skip to story</a>
+    <div class="hero-meta" id="heroMeta"><span><b>285</b> frames</span><span><b>04</b> chapters</span><span><b>08</b> story sections</span></div>
+  </div>
+  <div class="scroll-indicator" id="scrollIndicator"></div>
+</header>
+
+<!-- CINEMATIC JOURNEY: lumenvale chapters + youtube image-sequence scrub -->
+<section id="journey">
+  <div class="journey-pin" id="journeyPin">
+    <div class="journey-sticky">
+      <div class="journey-count" id="journeyCount">01 / 04</div>
+      <div class="journey-dots" id="journeyDots" role="tablist" aria-label="Flight chapters">
+        <button class="active" data-goto="0" aria-label="Chapter 1"></button><button data-goto="1" aria-label="Chapter 2"></button><button data-goto="2" aria-label="Chapter 3"></button><button data-goto="3" aria-label="Chapter 4"></button>
+      </div>
+      <div class="journey-step" data-step="0"><div class="chapter-num">01</div><h3>The Path</h3><p>Above the lamps and flowers, the castle glows at the end of the road. Every dream starts far away — keep scrolling to move closer.</p></div>
+      <div class="journey-step" data-step="1"><div class="chapter-num">02</div><h3>The Struggle</h3><p>Bankruptcy. Lost Oswald. 300 rejections. The walls get closer and the details sharper — failure looked closely becomes instruction.</p></div>
+      <div class="journey-step" data-step="2"><div class="chapter-num">03</div><h3>The Turning Point</h3><p>Mickey. Snow White. Light in the windows. One character, one film, one brave decision can change everything.</p></div>
+      <div class="journey-step" data-step="3"><div class="chapter-num">04</div><h3>Above the Clouds</h3><p>Disneyland rises out of imagination the way this tower rises out of cloud. Keep going — the full story is below.</p></div>
+      <div class="journey-hint">SCROLL — THE CASTLE RESPONDS</div>
+    </div>
+  </div>
+</section>
+
+<section id="intro">
+  <div class="section-label">01 — The Beginning</div>
+  <h2 class="section-title reveal">More than just a success story.</h2>
+  <div class="intro-card reveal tilt-card">Walt Disney is remembered as an extraordinarily successful and creative animator, filmmaker and theme-park developer.<br><br>But his success did not come easily. His journey was shaped by an unhappy childhood, <span class="highlight">business failures</span>, rejection and countless setbacks.</div>
+</section>
+
+<section id="early">
+  <div class="section-label">02 — Early Life</div>
+  <h2 class="section-title reveal">A difficult childhood</h2>
+  <p class="section-intro">Disney was born in Chicago in 1901 and raised in Missouri. His childhood experiences helped shape his imagination and determination.</p>
+  <div class="cards">
+    <div class="card reveal tilt-card"><div class="card-number">1901</div><h3>Born in Chicago</h3><p>Walt Disney was born in 1901 and was the fourth son among five siblings.</p></div>
+    <div class="card reveal tilt-card"><div class="card-number">FAMILY</div><h3>A Difficult Home</h3><p>His father, Elias, was described as a domineering and abusive figure. Disney often found escape through drawing.</p></div>
+    <div class="card reveal tilt-card"><div class="card-number">1919</div><h3>A New Direction</h3><p>After being rejected from the Army for being underage, he joined the Red Cross and went to France as an ambulance driver.</p></div>
+  </div>
+</section>
+
+<section id="struggle">
+  <div class="section-label">03 — The Struggle</div>
+  <h2 class="section-title reveal">Failure came early.</h2>
+  <p class="section-intro">Before Mickey Mouse and Disneyland, Disney had already experienced major disappointments.</p>
+  <div class="timeline" id="timeline"><div class="timeline-fill" id="timelineFill"></div>
+    <div class="timeline-item reveal"><div class="timeline-dot"></div><div class="year">1920</div><h3>Laugh-O-Gram Studios</h3><p>Disney and his brother Roy launched their own cartoon business. Only a few years later, the company went <b>bankrupt</b>.</p></div>
+    <div class="timeline-item reveal"><div class="timeline-dot"></div><div class="year">AFTER BANKRUPTCY</div><h3>Los Angeles</h3><p>Disney tried acting but failed at that too. Instead of giving up, he moved toward animation and convinced Roy to join him.</p></div>
+    <div class="timeline-item reveal"><div class="timeline-dot"></div><div class="year">OSWALD</div><h3>He lost his own character</h3><p>Oswald the Lucky Rabbit became successful, but Disney discovered that he had lost the legal rights to the character.</p></div>
+    <div class="timeline-item reveal"><div class="timeline-dot"></div><div class="year">1928</div><h3>A new beginning</h3><p>Rather than fighting over Oswald, Disney walked away and started again. On the journey back to California, the idea that became <b>Mickey Mouse</b> was born.</p></div>
+  </div>
+</section>
+
+<section id="success">
+  <div class="section-label">04 — The Turning Point</div>
+  <div class="big-moment reveal tilt-card"><h2>From a lost character<br>to Mickey Mouse.</h2><p>After years of struggle, Disney brought Mickey Mouse to life on film in the late 1920s.<br><br>But even Mickey faced rejection. Investors rejected the famous mouse more than <b>300 times</b> before one finally accepted the idea.</p></div>
+  <div class="stats">
+    <div class="stat reveal tilt-card"><strong data-count="300" data-suffix="+">0</strong><span>Investor rejections</span></div>
+    <div class="stat reveal tilt-card"><strong data-count="1928">0</strong><span>Mickey Mouse era begins</span></div>
+    <div class="stat reveal tilt-card"><strong data-count="1937">0</strong><span>Snow White released</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-label">05 — Success Wasn't Easy</div>
+  <h2 class="section-title reveal">Even success brought problems.</h2>
+  <p class="section-intro">Disney's growing business still faced financial, creative and personal challenges.</p>
+  <div class="cards">
+    <div class="card reveal tilt-card"><div class="card-number">FINANCIAL</div><h3>Heavy Pressure</h3><p>Disney often struggled financially and had to deal with growing debts.</p></div>
+    <div class="card reveal tilt-card"><div class="card-number">1937–1942</div><h3>Risky Films</h3><p>Snow White became a huge success, but films such as Fantasia and Bambi initially failed financially.</p></div>
+    <div class="card reveal tilt-card"><div class="card-number">WORLD WAR II</div><h3>Another Setback</h3><p>Animators went on strike and the company struggled to rebuild after the war.</p></div>
+  </div>
+</section>
+
+<section id="disneyland">
+  <div class="section-label">06 — The Big Gamble</div>
+  <h2 class="section-title reveal">Disneyland</h2>
+  <p class="section-intro">Disney diversified into television and used the success of his shows to raise enough capital for his biggest venture yet.</p>
+  <div class="big-moment reveal tilt-card"><h2>July 17, 1955</h2><p>Disneyland opened in Anaheim, California.<br><br>But the opening was chaotic. Forged tickets brought huge crowds, temperatures reached around 100°F, drinking fountains were not working properly and some rides malfunctioned.<br><br>Critics called it <b>"Black Sunday."</b> Yet Disney persevered, and Disneyland eventually became a colossal success.</p></div>
+  <div class="cards" style="margin-top:20px">
+    <div class="card reveal tilt-card"><img src="seq_opt/ezgif-frame-001.jpg" alt="Castle path" loading="lazy"><div class="card-number">FRAME 001</div><h3>The Path</h3><p>The opening view from your scroll flight.</p></div>
+    <div class="card reveal tilt-card"><img src="seq_opt/ezgif-frame-140.jpg" alt="Castle windows" loading="lazy"><div class="card-number">FRAME 140</div><h3>The Details</h3><p>Up close — every lit window earned.</p></div>
+    <div class="card reveal tilt-card"><img src="seq_opt/ezgif-frame-285.jpg" alt="Castle above clouds" loading="lazy"><div class="card-number">FRAME 285</div><h3>The Dream</h3><p>Above the clouds, where Walt aimed.</p></div>
+  </div>
+</section>
+
+<section id="lesson">
+  <div class="section-label">07 — The Lesson</div>
+  <h2 class="section-title reveal">What can we learn from Disney?</h2>
+  <div class="cards">
+    <div class="card reveal tilt-card"><div class="card-number">01</div><h3>Failure isn't the end</h3><p>Bankruptcy, rejection and failed projects did not stop Disney from trying again.</p></div>
+    <div class="card reveal tilt-card"><div class="card-number">02</div><h3>Adapt to change</h3><p>Disney moved from cartoons to films, television and eventually theme parks.</p></div>
+    <div class="card reveal tilt-card"><div class="card-number">03</div><h3>Keep moving forward</h3><p>When one idea failed, Disney searched for another path instead of staying stuck in the past.</p></div>
+  </div>
+</section>
+
+<section class="quote-section">
+  <div class="quote-mark reveal">“</div>
+  <div class="quote reveal">Adversity and obstacles can strengthen us. Sometimes the hardest moments can become the beginning of something better.</div>
+  <div class="quote-author reveal">— Inspired by Walt Disney's reflections on failure</div>
+</section>
+
+<section class="final">
+  <div class="section-label" style="justify-content:center">08 — Final Thought</div>
+  <h2 class="reveal">The dream survived<br>the setbacks.</h2>
+  <p class="reveal">Walt Disney's story shows that success is rarely a straight road. His failures did not disappear — they became part of the journey that led to his greatest achievements.</p>
+  <div class="final-cta reveal"><a href="#journey" class="scroll-btn">↻ Replay the flight</a><a href="#intro" class="scroll-btn ghost" style="opacity:1">Re-read the story</a><a href="quiz.html" class="scroll-btn" style="background:linear-gradient(135deg,#ffb84d,#ff7a4d);color:#111;margin-left:0;">🎬 Take the Quiz →</a></div>
+</section>
+
+<footer><div class="foot-title">Walt <span>Disney</span> — Castle Scroll Journey</div>285-frame scroll flight + Struggle &amp; Success story · optimized frames · scroll to fly</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+"use strict";
+var hasGsap = (typeof gsap !== "undefined" && typeof ScrollTrigger !== "undefined");
+if (hasGsap){ try{ gsap.registerPlugin(ScrollTrigger); }catch(e){ hasGsap = false; } }
+var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var isTouch = window.matchMedia("(hover: none)").matches;
+if (isTouch) document.body.classList.add("touch");
+
+/* ---------- Image sequence preload + canvas scrub (FIXED: progressive, no 88MB block) ---------- */
+var FRAME_COUNT = 285;
+var frames = new Array(FRAME_COUNT);
+var loaded = 0, firstDrawn = false, loaderHidden = false;
+var canvas = document.getElementById("sequence-canvas");
+var ctx = canvas.getContext("2d");
+var loader = document.getElementById("loader");
+var loaderFill = document.getElementById("loaderFill");
+var loaderPct = document.getElementById("loaderPct");
+var currentFrame = 0, targetFrame = 0;
+
+function resize(){
+  var dpr = Math.min(window.devicePixelRatio || 1, 1); // FIX: DPR 1 — 4K canvas killed scroll perf
+  canvas.width = Math.floor(window.innerWidth * dpr);
+  canvas.height = Math.floor(window.innerHeight * dpr);
+  drawFrame(currentFrame);
+}
+window.addEventListener("resize", resize);
+resize(); // FIX: size canvas immediately, don't wait for image 001
+
+function drawCover(img){
+  if (!img || !img.naturalWidth) return;
+  var cw = canvas.width, ch = canvas.height;
+  var scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+  var w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+  ctx.clearRect(0,0,cw,ch);
+  ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
+}
+function drawFrame(i){
+  var idx = Math.max(0, Math.min(FRAME_COUNT - 1, Math.round(i)));
+  // FIX: if exact target frame not yet loaded, find nearest loaded frame (either direction)
+  var img = frames[idx];
+  if (!img || !img.naturalWidth){
+    for (var d = 1; d < FRAME_COUNT; d++){
+      var a = frames[idx - d], b = frames[idx + d];
+      if (a && a.complete && a.naturalWidth){ img = a; break; }
+      if (b && b.complete && b.naturalWidth){ img = b; break; }
+      if (idx - d < 0 && idx + d >= FRAME_COUNT) break;
+    }
+  }
+  if (img && img.complete && img.naturalWidth) { drawCover(img); }
+}
+function framePath(i){ return "seq_opt/ezgif-frame-" + String(i).padStart(3,"0") + ".jpg"; }
+
+function hideLoaderOnce(){
+  if (loaderHidden) return;
+  loaderHidden = true;
+  loader.classList.add("hidden");
+  heroIntro();
+  if (hasGsap){ try{ ScrollTrigger.refresh(); }catch(e){} }
+}
+function updateLoader(){
+  var pct = Math.round(loaded / FRAME_COUNT * 100);
+  loaderFill.style.width = pct + "%"; loaderPct.textContent = pct + "%";
+  // FIX: hide loader as soon as first frame is visible (don't wait for all 285 ≈ 88MB)
+  if (firstDrawn && !loaderHidden && (loaded >= 8 || pct >= 5)) hideLoaderOnce();
+}
+// FIX: staggered background loading — 6 at a time, frame 1 first for instant paint
+// Priority order: frame 1, then every 15th frame (scrub keyframes), then everything else
+var loadQueue = [1];
+for (var q = 15; q <= FRAME_COUNT; q += 15){ if (q !== 1) loadQueue.push(q); }
+if (loadQueue.indexOf(FRAME_COUNT) === -1) loadQueue.push(FRAME_COUNT);
+for (var q2 = 2; q2 <= FRAME_COUNT; q2++){ if (loadQueue.indexOf(q2) === -1) loadQueue.push(q2); }
+var CONCURRENT = 6, active = 0;
+function loadNext(){
+  if (!loadQueue.length) { if (loaded >= FRAME_COUNT) setTimeout(hideLoaderOnce, 300); return; }
+  while (active < CONCURRENT && loadQueue.length){
+    (function(idx){
+      active++;
+      var img = new Image();
+      img.decoding = "async";
+      img.onload = function(){
+        frames[idx-1] = img; loaded++; active--;
+        if (idx === 1 && !firstDrawn){ firstDrawn = true; resize(); }
+        updateLoader();
+        if (loaded >= FRAME_COUNT) setTimeout(hideLoaderOnce, 300);
+        else loadNext();
+      };
+      img.onerror = function(){ loaded++; active--; updateLoader(); loadNext(); };
+      img.src = framePath(idx);
+    })(loadQueue.shift());
+  }
+}
+loadNext();
+// Safety nets: never trap user on loader
+setTimeout(function(){ if (firstDrawn) hideLoaderOnce(); }, 3500);
+setTimeout(hideLoaderOnce, 8000);
+
+function updateTargetFromScroll(){
+  var doc = document.documentElement;
+  var max = doc.scrollHeight - window.innerHeight;
+  targetFrame = max > 0 ? (window.scrollY / max) * (FRAME_COUNT - 1) : 0;
+}
+window.addEventListener("scroll", updateTargetFromScroll, {passive:true});
+updateTargetFromScroll();
+window.__dbg = { get loaded(){ return loaded; }, get current(){ return currentFrame; }, get target(){ return targetFrame; } };
+
+(function smoothLoop(){
+  requestAnimationFrame(smoothLoop);
+  // FIX: reduced-motion must NOT freeze scroll-driven canvas (it's user-controlled, not autoplay).
+  // Just snap directly instead of smoothing.
+  if (reducedMotion){ if (currentFrame !== targetFrame){ currentFrame = targetFrame; drawFrame(currentFrame); } return; }
+  if (Math.abs(targetFrame - currentFrame) > 0.02){
+    currentFrame += (targetFrame - currentFrame) * 0.12;
+    // snap when very close to avoid endless micro-redraws
+    if (Math.abs(targetFrame - currentFrame) <= 0.02) currentFrame = targetFrame;
+    drawFrame(currentFrame);
+  }
+})();
+
+/* ---------- Journey steps (FIXED: works with or without GSAP) ---------- */
+var steps = Array.prototype.slice.call(document.querySelectorAll(".journey-step"));
+var journeyPin = document.getElementById("journeyPin");
+
+/* ---------- Journey dots + counter (declared BEFORE triggers: GSAP fires onUpdate synchronously on create) ---------- */
+var journeyDots = Array.prototype.slice.call(document.querySelectorAll("#journeyDots button"));
+var journeyCount = document.getElementById("journeyCount");
+function setActiveStep(i){
+  journeyDots.forEach(function(d, k){ d.classList.toggle("active", k === i); });
+  if (journeyCount) journeyCount.textContent = ("0" + (i + 1)) + " / 04";
+}
+function showStepFallback(){
+  if (!journeyPin) return;
+  var rect = journeyPin.getBoundingClientRect();
+  // progress 0..1 across the 500vh pin
+  var total = rect.height - window.innerHeight;
+  var p = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 0;
+  var n = steps.length;
+  var activeIdx = Math.min(n - 1, Math.floor(p * n));
+  // fade edges so steps crossfade
+  steps.forEach(function(step, i){
+    var on = (i === activeIdx);
+    step.style.opacity = on ? 1 : 0;
+    step.style.transform = on ? "translateY(0)" : "translateY(40px)";
+    step.style.transition = "opacity .45s, transform .45s";
+    step.style.pointerEvents = on ? "auto" : "none";
+  });
+  if (typeof setActiveStep === "function") setActiveStep(activeIdx);
+}
+if (hasGsap){
+  steps.forEach(function(step, i){
+    var start = (i / steps.length * 100), end = ((i + 1) / steps.length * 100);
+    ScrollTrigger.create({
+      trigger: "#journeyPin", start: "top top", end: "bottom bottom", scrub: 0.6,
+      onUpdate: function(self){
+        var p = self.progress * 100;
+        var active = p >= start && p < end + 8;
+        gsap.to(step, {opacity: active ? 1 : 0, y: active ? 0 : 40, duration: 0.45, overwrite: true});
+      }
+    });
+  });
+  // ensure step 0 visible on load
+  if (steps[0]) gsap.set(steps[0], {opacity: 1, y: 0});
+  if (typeof setActiveStep === "function") setActiveStep(0);
+  ScrollTrigger.create({
+    trigger: "#journeyPin", start: "top top", end: "bottom bottom", scrub: 0.6,
+    onUpdate: function(self){
+      if (typeof setActiveStep === "function") setActiveStep(Math.min(steps.length - 1, Math.floor(self.progress * steps.length)));
+    }
+  });
+} else {
+  window.addEventListener("scroll", showStepFallback, {passive:true});
+  window.addEventListener("resize", showStepFallback);
+  showStepFallback();
+}
+
+/* ---------- Hero entrance (FIXED: CSS fallback if GSAP offline) ---------- */
+function heroIntro(){
+  if (reducedMotion){
+    ["#eyebrow","#heroTitle","#heroText","#heroCta","#heroCta2","#heroMeta","#scrollIndicator"].forEach(function(s){ var el=document.querySelector(s); if(el) el.style.opacity=1; });
+    return;
+  }
+  if (!hasGsap){
+    ["#eyebrow","#heroTitle","#heroText","#heroCta","#heroCta2","#heroMeta","#scrollIndicator"].forEach(function(s, idx){
+      var el=document.querySelector(s); if(!el) return;
+      el.style.transition = "opacity .9s ease " + (idx * 0.15) + "s, transform .9s ease " + (idx * 0.15) + "s";
+      el.style.opacity = 1;
+    });
+    showStepFallback();
+    return;
+  }
+  gsap.timeline({defaults:{ease:"power3.out"}})
+    .to("#eyebrow",{opacity:1,duration:.7},.1)
+    .fromTo("#heroTitle",{opacity:0,y:30},{opacity:1,y:0,duration:.9},.25)
+    .fromTo("#heroText",{opacity:0,y:20},{opacity:1,y:0,duration:.9},.45)
+    .fromTo("#heroCta",{opacity:0,y:20},{opacity:1,y:0,duration:.8},.65)
+    .to("#heroCta2",{opacity:1,duration:.8},.72)
+    .to("#heroMeta",{opacity:1,duration:.8},.8)
+    .fromTo("#scrollIndicator",{opacity:0},{opacity:1,duration:.8},.9);
+}
+
+/* ---------- Journey dots click-to-jump ---------- */
+journeyDots.forEach(function(d){
+  d.addEventListener("click", function(){
+    if (!journeyPin) return;
+    var total = journeyPin.offsetHeight - window.innerHeight;
+    var y = journeyPin.offsetTop + (parseInt(d.getAttribute("data-goto"), 10) + 0.5) / steps.length * total;
+    window.scrollTo({top: y, behavior: reducedMotion ? "auto" : "smooth"});
+  });
+});
+
+/* ---------- Progress bar + parallax orbs + nav state (single handler) ---------- */
+var progressBar = document.getElementById("progressBar");
+var topnav = document.getElementById("topnav");
+var orbOne = document.getElementById("orbOne"), orbTwo = document.getElementById("orbTwo");
+var ticking = false;
+function onScrollAll(){
+  ticking = false;
+  var max = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+  if (topnav) topnav.classList.toggle("scrolled", window.scrollY > 40);
+  var y = window.scrollY;
+  orbOne.style.transform = "translate3d(0," + (y * .15) + "px,0)";
+  orbTwo.style.transform = "translate3d(0," + (y * -.1) + "px,0)";
+  updateTimelineFill();
+  updateNavActive();
+}
+window.addEventListener("scroll", function(){ if (!ticking){ ticking = true; requestAnimationFrame(onScrollAll); } }, {passive:true});
+
+/* ---------- Reveal (c.html) ---------- */
+var revealObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if (e.isIntersecting) e.target.classList.add("visible"); });
+},{threshold:.12});
+document.querySelectorAll(".reveal").forEach(function(el){ revealObs.observe(el); });
+
+/* ---------- Timeline fill + dots ---------- */
+var timelineItems = document.querySelectorAll(".timeline-item");
+var tObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if (e.isIntersecting) e.target.classList.add("visible"); });
+},{threshold:.4});
+timelineItems.forEach(function(el){ tObs.observe(el); });
+var timeline = document.getElementById("timeline"), timelineFill = document.getElementById("timelineFill");
+function updateTimelineFill(){
+  if (!timeline) return;
+  var rect = timeline.getBoundingClientRect();
+  var pct = Math.max(0, Math.min(100, ((window.innerHeight * .75 - rect.top) / rect.height) * 100));
+  timelineFill.style.height = pct + "%";
+}
+window.addEventListener("resize", updateTimelineFill);
+
+/* ---------- Counters (c.html) ---------- */
+function animateCounter(el){
+  var target = parseInt(el.getAttribute("data-count"),10), suffix = el.getAttribute("data-suffix") || "";
+  var start = performance.now(), dur = 1400;
+  (function tick(now){
+    var p = Math.min(1, (now - start) / dur), eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.floor(eased * target) + suffix;
+    if (p < 1) requestAnimationFrame(tick); else el.textContent = target + suffix;
+  })(start);
+}
+var cObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if (e.isIntersecting){ animateCounter(e.target); cObs.unobserve(e.target); } });
+},{threshold:.6});
+document.querySelectorAll("[data-count]").forEach(function(el){ cObs.observe(el); });
+
+/* ---------- Active nav ---------- */
+var navLinks = document.querySelectorAll("[data-nav]");
+var navTargets = Array.prototype.map.call(navLinks, function(a){ return document.querySelector(a.getAttribute("href")); });
+function updateNavActive(){
+  var current = -1;
+  navTargets.forEach(function(t, i){ if (t && t.getBoundingClientRect().top <= window.innerHeight * .4) current = i; });
+  navLinks.forEach(function(a, i){ a.classList.toggle("active", i === current); });
+}
+
+/* ---------- Mobile menu (d.html) ---------- */
+var burger = document.getElementById("hamburger"), mobileMenu = document.getElementById("mobileMenu");
+burger.addEventListener("click", function(){ burger.classList.toggle("open"); mobileMenu.classList.toggle("open"); });
+mobileMenu.querySelectorAll("a").forEach(function(a){ a.addEventListener("click", function(){ burger.classList.remove("open"); mobileMenu.classList.remove("open"); }); });
+
+/* ---------- Custom cursor (d.html) ---------- */
+if (!isTouch){
+  var ring = document.getElementById("cursorRing"), dot = document.getElementById("cursorDot");
+  var rx = innerWidth/2, ry = innerHeight/2, mx = rx, my = ry;
+  window.addEventListener("mousemove", function(e){
+    mx = e.clientX; my = e.clientY;
+    dot.style.left = mx + "px"; dot.style.top = my + "px";
+  });
+  (function loop(){ rx += (mx - rx) * .18; ry += (my - ry) * .18; ring.style.left = rx + "px"; ring.style.top = ry + "px"; requestAnimationFrame(loop); })();
+  document.querySelectorAll("a,button,.card,.stat").forEach(function(el){
+    el.addEventListener("mouseenter", function(){ ring.classList.add("hover"); });
+    el.addEventListener("mouseleave", function(){ ring.classList.remove("hover"); });
+  });
+}
+
+/* ---------- 3D tilt cards (d.html) ---------- */
+if (!isTouch && !reducedMotion){
+  document.querySelectorAll(".tilt-card").forEach(function(card){
+    card.addEventListener("mousemove", function(e){
+      var r = card.getBoundingClientRect();
+      var px = (e.clientX - r.left) / r.width - .5, py = (e.clientY - r.top) / r.height - .5;
+      card.style.transform = "perspective(1000px) rotateX(" + (-py*8).toFixed(2) + "deg) rotateY(" + (px*8).toFixed(2) + "deg) translateZ(8px)";
+    });
+    card.addEventListener("mouseleave", function(){ card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg)"; });
+  });
+}
+})();
+</script>
+</body>
+</html>
